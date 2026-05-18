@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CalcNota · Cálculo de Notas de Consumo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --void: #05070f;
+  --base: #0b0e1c;
+  --panel: #10152a;
+  --panel2: #151c34;
+  --rim: #1e2845;
+  --rim2: #2a375e;
+  --ice: #e8f0ff;
+  --mist: #8899cc;
+  --fog: #4a5880;
+  --neon: #3d7fff;
+  --neon2: #00c9ff;
+  --hot: #ff4b6e;
+  --warm: #ffb347;
+  --mint: #00e59b;
+  --purple: #a78bfa;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-ui: 'Outfit', sans-serif;
+}
+
+html { scroll-behavior: smooth; color-scheme: dark; }
+body {
+  background: var(--void);
+  color: var(--ice);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* NOISE OVERLAY */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: 0.35;
+}
+
+/* LOGIN */
+.login-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--void);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.login-overlay.hidden { display: none; }
+.login-box {
+  background: var(--panel); border: 1px solid var(--rim2);
+  border-radius: 16px; padding: 46px 40px 34px;
+  width: 100%; max-width: 400px; text-align: center;
+  box-shadow: 0 32px 80px rgba(0,0,0,.8);
+  position: relative; overflow: hidden;
+}
+.login-box::before {
+  content: ''; position: absolute; top: -110px; right: -90px;
+  width: 250px; height: 250px; border-radius: 50%;
+  background: var(--neon); opacity: 0.1; filter: blur(60px);
+}
+.login-logo {
+  width: 56px; height: 56px; margin: 0 auto 16px;
+  background: linear-gradient(135deg, var(--neon), var(--neon2));
+  border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 24px rgba(61,127,255,0.4);
+  position: relative; z-index: 1;
+}
+.login-logo svg { width: 30px; height: 30px; }
+.login-brand {
+  font-family: var(--font-display);
+  font-size: 46px; letter-spacing: 3px;
+  background: linear-gradient(90deg, var(--neon), var(--neon2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 4px; line-height: 1;
+  position: relative; z-index: 1;
+}
+.login-sub {
+  font-size: 11px; color: var(--fog);
+  letter-spacing: 1.5px; text-transform: uppercase;
+  margin-bottom: 30px; font-weight: 500;
+  position: relative; z-index: 1;
+}
+.login-field { position: relative; margin-bottom: 14px; z-index: 1; }
+.login-field input {
+  width: 100%; background: var(--panel2); border: 1px solid var(--rim);
+  border-radius: 8px; padding: 13px 16px;
+  color: var(--ice); font-family: var(--font-ui);
+  font-size: 14px; outline: none;
+  transition: border-color .2s; text-align: left;
+}
+.login-field input:focus { border-color: var(--neon); }
+.login-field input::placeholder { color: var(--fog); }
+.login-btn {
+  width: 100%; margin-top: 6px;
+  background: linear-gradient(135deg, var(--neon), var(--neon2));
+  color: #fff; border: none; border-radius: 8px;
+  padding: 14px; font-family: var(--font-ui);
+  font-size: 13px; font-weight: 700; text-transform: uppercase;
+  cursor: pointer; letter-spacing: 1px;
+  transition: all .2s; position: relative; z-index: 1;
+}
+.login-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(61,127,255,.4); }
+.login-btn:disabled { opacity: 0.6; cursor: wait; transform: none; }
+.login-err {
+  color: var(--hot); font-size: 12px; margin-top: 12px;
+  min-height: 18px; letter-spacing: .2px; font-weight: 500;
+  position: relative; z-index: 1;
+}
+.login-footer {
+  font-size: 10px; color: var(--fog); margin-top: 22px;
+  letter-spacing: .06em; position: relative; z-index: 1;
+}
+
+/* TOPBAR */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(5,7,15,0.88);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--rim);
+  padding: 0 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px;
+}
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+.brand-logo {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--neon), var(--neon2));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(61,127,255,0.35);
+}
+.brand-logo svg { width: 18px; height: 18px; }
+.brand {
+  font-family: var(--font-display);
+  font-size: 26px; letter-spacing: 2px;
+  background: linear-gradient(90deg, var(--neon), var(--neon2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.brand-sep { width: 1px; height: 28px; background: var(--rim2); }
+.brand-sub { font-size: 11px; color: var(--fog); font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px; }
+.brand-sub strong { color: var(--ice); font-weight: 600; }
+.topbar-right { display: flex; align-items: center; gap: 14px; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 8px var(--mint); animation: pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.last-sync { font-size: 11px; color: var(--fog); }
+
+/* NAV BACK */
+.nav-back {
+  display: none; align-items: center; gap: 7px;
+  background: transparent; border: 1px solid var(--rim); color: var(--mist);
+  padding: 7px 14px; border-radius: 8px; cursor: pointer;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; transition: all 0.15s;
+}
+.nav-back:hover { border-color: var(--neon); color: var(--neon2); }
+.nav-back svg { display: block; }
+
+/* LAYOUT */
+.wrap { position: relative; z-index: 1; padding: 32px; max-width: 1280px; margin: 0 auto; }
+
+/* ========= HOME / MÓDULOS ========= */
+.home-hero { text-align: center; margin: 30px 0 44px; }
+.home-hero .eyebrow {
+  font-size: 11px; color: var(--fog); font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px;
+}
+.home-hero h1 {
+  font-family: var(--font-display); font-size: clamp(40px, 7vw, 68px);
+  letter-spacing: 3px; line-height: 0.95;
+  background: linear-gradient(120deg, var(--ice) 10%, var(--neon) 55%, var(--neon2) 95%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.home-hero p { font-size: 13px; color: var(--mist); margin-top: 12px; }
+.home-rule {
+  width: 56px; height: 3px; margin: 18px auto 0;
+  background: linear-gradient(90deg, var(--neon), var(--neon2));
+  border-radius: 2px;
+}
+
+.modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.module {
+  background: var(--panel); border: 1px solid var(--rim);
+  border-radius: 16px; padding: 28px 26px;
+  position: relative; overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+  text-align: left;
+}
+.module.live { cursor: pointer; }
+.module.live:hover { transform: translateY(-5px); border-color: var(--rim2); }
+.module.soon { opacity: 0.62; }
+.module-glow {
+  position: absolute; top: -30px; right: -30px;
+  width: 110px; height: 110px; border-radius: 50%;
+  opacity: 0.16; filter: blur(28px);
+}
+.module.m-water .module-glow { background: var(--neon2); }
+.module.m-energy .module-glow { background: var(--warm); }
+.module-ico {
+  width: 54px; height: 54px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 18px;
+}
+.module.m-water .module-ico { background: linear-gradient(135deg, var(--neon), var(--neon2)); box-shadow: 0 6px 20px rgba(0,201,255,0.3); }
+.module.m-energy .module-ico { background: linear-gradient(135deg, var(--warm), #ff8c42); box-shadow: 0 6px 20px rgba(255,179,71,0.25); }
+.module-ico svg { width: 28px; height: 28px; color: #fff; }
+.module h2 {
+  font-family: var(--font-display); font-size: 30px;
+  letter-spacing: 1.5px; color: var(--ice); margin-bottom: 6px;
+}
+.module p { font-size: 12px; color: var(--mist); line-height: 1.6; min-height: 38px; }
+.module-foot {
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--rim);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.module-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 20px;
+}
+.module-badge.on { background: rgba(0,229,155,0.15); color: var(--mint); border: 1px solid rgba(0,229,155,0.3); }
+.module-badge.off { background: rgba(74,88,128,0.15); color: var(--fog); border: 1px solid var(--rim2); }
+.module-arrow { color: var(--neon2); display: flex; }
+.module.soon .module-arrow { display: none; }
+
+/* ========= CALCULADORA ========= */
+.calc { display: none; }
+.calc.active { display: block; animation: fadeIn 0.25s ease; }
+@keyframes fadeIn { from {opacity:0; transform:translateY(8px)} to {opacity:1; transform:translateY(0)} }
+
+.sec-hdr { display: flex; align-items: center; gap: 10px; margin: 8px 0 16px; }
+.sec-hdr::before { content: ''; display: block; width: 3px; height: 22px; background: linear-gradient(180deg,var(--neon),var(--neon2)); border-radius: 2px; }
+.sec-hdr-txt { font-family: var(--font-display); font-size: 20px; letter-spacing: 1.5px; color: var(--ice); }
+.sec-hdr-sub { font-size: 11px; color: var(--fog); margin-left: auto; }
+
+.card {
+  background: var(--panel); border: 1px solid var(--rim);
+  border-radius: 14px; padding: 22px; margin-bottom: 22px;
+}
+
+/* form */
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+  gap: 16px 18px;
+}
+.field label {
+  display: block; font-size: 10px; color: var(--fog);
+  font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  margin-bottom: 7px;
+}
+.field input, .field select {
+  width: 100%; background: var(--panel2);
+  border: 1px solid var(--rim); color: var(--ice);
+  padding: 11px 12px; border-radius: 8px;
+  font-family: var(--font-ui); font-size: 14px; font-weight: 500;
+  outline: none; transition: border-color 0.15s, background 0.15s;
+  /* faz o calendário nativo e a lista do select abrirem em tema escuro */
+  color-scheme: dark;
+}
+.field input:focus, .field select:focus {
+  border-color: var(--neon);
+  background: rgba(61,127,255,0.05);
+}
+.field input::placeholder { color: var(--fog); }
+/* opções da lista do select (parte que dá para estilizar) */
+.field select option {
+  background: var(--panel2);
+  color: var(--ice);
+  font-family: var(--font-ui);
+}
+.field select {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a5880'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 11px center; padding-right: 28px;
+}
+/* ícone do calendário no input date */
+.field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(1) saturate(3) hue-rotate(175deg);
+  cursor: pointer;
+}
+.field .hint { font-size: 10px; color: var(--fog); margin-top: 5px; }
+
+/* computed pills */
+.computed-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+  gap: 12px; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--rim);
+}
+.pill {
+  background: var(--panel2); border: 1px solid var(--rim);
+  border-radius: 11px; padding: 13px 15px; position: relative; overflow: hidden;
+}
+.pill-glow { position: absolute; top:-16px; right:-16px; width:54px; height:54px; border-radius:50%; background: var(--neon); opacity: 0.12; filter: blur(14px); }
+.pill .plabel { font-size: 9px; color: var(--fog); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.pill .pval {
+  font-family: var(--font-display); font-size: 30px; line-height: 1; margin-top: 6px;
+  background: linear-gradient(135deg, var(--ice), var(--mist));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.pill.is-key { border-color: var(--neon); background: linear-gradient(135deg, rgba(61,127,255,0.14), rgba(0,201,255,0.07)); }
+.pill.is-key .pval { background: linear-gradient(135deg, var(--neon), var(--neon2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.pill.is-key .pill-glow { background: var(--neon2); opacity: 0.2; }
+
+/* tariff table */
+.table-scroll { overflow-x: auto; margin: 0 -4px; }
+.tabela { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 560px; }
+.tabela th {
+  font-size: 10px; color: var(--fog); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  text-align: right; padding: 11px 10px; border-bottom: 1px solid var(--rim);
+}
+.tabela th:first-child { text-align: left; }
+.tabela td {
+  padding: 11px 10px; border-bottom: 1px solid rgba(30,40,69,0.4);
+  color: var(--ice); text-align: right; font-variant-numeric: tabular-nums;
+}
+.tabela td:first-child { text-align: left; font-weight: 600; color: var(--mist); }
+.tabela td.money { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.5px; }
+.tabela tr.active-band td { background: rgba(61,127,255,0.10); }
+.tabela tr.active-band td:first-child {
+  box-shadow: inset 3px 0 0 var(--neon); color: var(--neon2);
+}
+.tabela tbody tr:hover td { background: var(--panel2); }
+.tabela tr.active-band:hover td { background: rgba(61,127,255,0.14); }
+.band-tag {
+  display: inline-block; font-size: 8px; font-weight: 700;
+  background: linear-gradient(90deg, var(--neon), var(--neon2));
+  color: #05070f; padding: 2px 7px; border-radius: 4px;
+  margin-left: 8px; letter-spacing: 0.6px; vertical-align: middle;
+}
+.table-note { font-size: 11px; color: var(--fog); margin-top: 12px; }
+.table-note strong { color: var(--mist); }
+
+/* result */
+.result {
+  background: var(--panel); border: 1px solid var(--rim2);
+  border-radius: 16px; padding: 26px; margin-bottom: 22px;
+  position: relative; overflow: hidden;
+}
+.result::before {
+  content: ''; position: absolute; top: -90px; right: -70px;
+  width: 240px; height: 240px; border-radius: 50%;
+  background: var(--neon); opacity: 0.09; filter: blur(50px);
+}
+.result-hdr { font-size: 10px; color: var(--fog); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 18px; }
+.result-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+  gap: 1px; background: var(--rim); border: 1px solid var(--rim);
+  border-radius: 12px; overflow: hidden; position: relative; z-index: 1;
+}
+.result-item { background: var(--panel); padding: 18px 20px; }
+.result-item .ri-label { font-size: 10px; color: var(--fog); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.result-item .ri-value {
+  font-family: var(--font-display); font-size: 34px; line-height: 1; margin-top: 8px;
+  background: linear-gradient(135deg, var(--ice), var(--mist));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.result-item.total { background: linear-gradient(135deg, rgba(61,127,255,0.13), rgba(0,201,255,0.06)); }
+.result-item.total .ri-value { background: linear-gradient(135deg, var(--neon), var(--neon2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.band-note { margin-top: 16px; font-size: 12px; color: var(--mist); position: relative; z-index: 1; }
+.band-note strong { color: var(--neon2); }
+
+/* toolbar topo da calculadora */
+.calc-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--rim);
+  border-radius: 14px; padding: 16px 20px; margin-bottom: 22px;
+}
+.ct-info { display: flex; flex-direction: column; gap: 3px; }
+.ct-title { font-family: var(--font-display); font-size: 22px; letter-spacing: 1.2px; color: var(--ice); }
+.ct-sub { font-size: 11px; color: var(--fog); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: linear-gradient(135deg, var(--neon), var(--neon2));
+  color: #fff; border: none; padding: 11px 18px; border-radius: 9px;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+  cursor: pointer; letter-spacing: 1px; text-transform: uppercase;
+  transition: all 0.2s; box-shadow: 0 2px 12px rgba(61,127,255,0.25);
+}
+.btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(61,127,255,0.45); }
+.btn:active { transform: translateY(0); }
+.btn:disabled { opacity: 0.55; cursor: wait; transform: none; }
+.btn.done { background: linear-gradient(135deg, var(--mint), #00b8a9); }
+.btn svg { display: block; }
+
+@media (max-width: 640px) {
+  .wrap { padding: 20px 16px; }
+  .topbar { padding: 0 16px; }
+  .brand-sub { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 11l3 3L22 4"/>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+    </div>
+    <div class="login-brand">CALCNOTA</div>
+    <div class="login-sub">Cálculo de Notas de Consumo</div>
+
+    <form id="loginForm" autocomplete="off">
+      <div class="login-field">
+        <input type="text" id="loginUser" placeholder="Usuário" autocomplete="off" required>
+      </div>
+      <div class="login-field">
+        <input type="password" id="loginPass" placeholder="Senha" autocomplete="off" required>
+      </div>
+      <button type="submit" class="login-btn" id="loginBtn">Entrar</button>
+      <div class="login-err" id="loginErr"></div>
+    </form>
+
+    <div class="login-footer">Acesso restrito · Sistema interno</div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="brand-logo">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 11l3 3L22 4"/>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+    </div>
+    <div class="brand">CALCNOTA</div>
+    <div class="brand-sep"></div>
+    <div class="brand-sub">Desenvolvido por <strong>Wendell França</strong></div>
+  </div>
+  <div class="topbar-right">
+    <button class="nav-back" id="navBack">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+      </svg>
+      <span>Módulos</span>
+    </button>
+    <div class="status-dot"></div>
+    <div class="last-sync" id="statusTxt">Pronto</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ HOME ============ -->
+  <section id="home">
+    <div class="home-hero">
+      <div class="eyebrow">Sistema Interno · Consumo</div>
+      <h1>Calculadora de Notas</h1>
+      <p>Selecione o módulo para calcular o valor a repassar ao contábil.</p>
+      <div class="home-rule"></div>
+    </div>
+
+    <div class="modules">
+      <!-- ÁGUA -->
+      <div class="module m-water live" id="modWater">
+        <div class="module-glow"></div>
+        <div class="module-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+          </svg>
+        </div>
+        <h2>Água</h2>
+        <p>Leitura, consumo proporcional e cálculo por faixa de tarifa (água + esgoto).</p>
+        <div class="module-foot">
+          <span class="module-badge on">Disponível</span>
+          <span class="module-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <!-- ENERGIA -->
+      <div class="module m-energy live" id="modEnergy">
+        <div class="module-glow"></div>
+        <div class="module-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <h2>Energia</h2>
+        <p>Leitura de consumo elétrico, distribuição por tipo de demanda e cálculo do valor da nota.</p>
+        <div class="module-foot">
+          <span class="module-badge on">Disponível</span>
+          <span class="module-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CALCULADORA DE ÁGUA ============ -->
+  <section class="calc" id="calcWater">
+
+    <!-- TOOLBAR -->
+    <div class="calc-toolbar">
+      <div class="ct-info">
+        <span class="ct-title">Calculadora de Água</span>
+        <span class="ct-sub">Gere a imagem do cálculo para enviar ao contábil</span>
+      </div>
+      <button class="btn" id="btnImagem">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <span>Gerar Imagem</span>
+      </button>
+    </div>
+
+    <!-- BLOCO 1 -->
+    <div class="sec-hdr">
+      <span class="sec-hdr-txt">Leitura e Consumo</span>
+      <span class="sec-hdr-sub">Campos digitados pelo operador</span>
+    </div>
+    <div class="card">
+      <div class="grid">
+        <div class="field">
+          <label>Data Leitura Anterior</label>
+          <input type="date" id="dataAnterior">
+        </div>
+        <div class="field">
+          <label>Data Leitura Atual</label>
+          <input type="date" id="dataAtual">
+        </div>
+        <div class="field">
+          <label>Leitura Anterior (m³)</label>
+          <input type="number" id="leituraAnterior" step="any">
+        </div>
+        <div class="field">
+          <label>Leitura Atual (m³)</label>
+          <input type="number" id="leituraAtual" step="any">
+        </div>
+        <div class="field">
+          <label>Mês de Referência</label>
+          <select id="mesRef"><option value="">— selecione —</option></select>
+          <div class="hint">Define os dias do mês automaticamente</div>
+        </div>
+      </div>
+
+      <div class="computed-row">
+        <div class="pill"><div class="pill-glow"></div>
+          <div class="plabel">Consumo Total M³</div>
+          <div class="pval" id="outConsumo">—</div>
+        </div>
+        <div class="pill"><div class="pill-glow"></div>
+          <div class="plabel">Dias Medidos</div>
+          <div class="pval" id="outDiasMedidos">—</div>
+        </div>
+        <div class="pill"><div class="pill-glow"></div>
+          <div class="plabel">Consumo / Dia</div>
+          <div class="pval" id="outConsumoDia">—</div>
+        </div>
+        <div class="pill"><div class="pill-glow"></div>
+          <div class="plabel">Dias do Mês</div>
+          <div class="pval" id="outDiasMes">—</div>
+        </div>
+        <div class="pill is-key"><div class="pill-glow"></div>
+          <div class="plabel">Total Cobrado M³</div>
+          <div class="pval" id="outTotalCobrado">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLOCO 2 -->
+    <div class="sec-hdr">
+      <span class="sec-hdr-txt">Tarifas por Faixa</span>
+      <span class="sec-hdr-sub">Valores fixos · água e esgoto</span>
+    </div>
+    <div class="card">
+      <div class="table-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Faixa</th>
+              <th>Consumo de faixa<br>em 1.000 Lt</th>
+              <th>R$/1.000 L Esgoto</th>
+              <th>Valor Água</th>
+              <th>Valor Esgoto</th>
+              <th>Valor Total</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaFaixas"></tbody>
+        </table>
+      </div>
+      <p class="table-note">A faixa destacada é onde o <strong>Total Cobrado M³</strong> se enquadra — é ela que define o valor da nota.</p>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="result">
+      <div class="result-hdr">Valor para o Contábil</div>
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="ri-label">Valor Água</div>
+          <div class="ri-value" id="resAgua">R$ —</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-label">Valor Esgoto</div>
+          <div class="ri-value" id="resEsgoto">R$ —</div>
+        </div>
+        <div class="result-item total">
+          <div class="ri-label">Valor Total da Nota</div>
+          <div class="ri-value" id="resTotal">R$ —</div>
+        </div>
+      </div>
+      <p class="band-note" id="bandNote">Preencha o Bloco 1 para calcular.</p>
+    </div>
+
+  </section>
+
+  <!-- ============ CALCULADORA DE ENERGIA ============ -->
+  <section class="calc" id="calcEnergy">
+
+    <!-- TOOLBAR -->
+    <div class="calc-toolbar">
+      <div class="ct-info">
+        <span class="ct-title">Calculadora de Energia</span>
+        <span class="ct-sub">Gere a imagem do cálculo para enviar ao contábil</span>
+      </div>
+      <button class="btn" id="btnImagemEn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <span>Gerar Imagem</span>
+      </button>
+    </div>
+
+    <!-- BLOCO 1 -->
+    <div class="sec-hdr">
+      <span class="sec-hdr-txt">Leitura e Consumo</span>
+      <span class="sec-hdr-sub">Campos digitados pelo operador</span>
+    </div>
+    <div class="card">
+      <div class="grid">
+        <div class="field">
+          <label>Leitura Anterior (kWh)</label>
+          <input type="number" id="enLeituraAnterior" step="any">
+        </div>
+        <div class="field">
+          <label>Leitura Atual (kWh)</label>
+          <input type="number" id="enLeituraAtual" step="any">
+        </div>
+        <div class="field">
+          <label>Mês de Referência</label>
+          <select id="enMesRef"><option value="">— selecione —</option></select>
+        </div>
+      </div>
+
+      <div class="computed-row">
+        <div class="pill is-key"><div class="pill-glow"></div>
+          <div class="plabel">Consumo Total kWh</div>
+          <div class="pval" id="enOutConsumo">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLOCO 2 -->
+    <div class="sec-hdr">
+      <span class="sec-hdr-txt">Demanda por Tipo</span>
+      <span class="sec-hdr-sub">Percentuais e tarifas fixas</span>
+    </div>
+    <div class="card">
+      <div class="table-scroll">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>% Consumo</th>
+              <th>Tarifa (R$)</th>
+              <th>Demanda kWh</th>
+              <th>Valor Total</th>
+            </tr>
+          </thead>
+          <tbody id="enTabela"></tbody>
+        </table>
+      </div>
+      <p class="table-note">O consumo total é distribuído entre os tipos conforme o <strong>% Consumo</strong>, e cada parte é multiplicada pela sua tarifa.</p>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="result">
+      <div class="result-hdr">Valor para o Contábil</div>
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="ri-label">Demanda Ativa HFP</div>
+          <div class="ri-value" id="enResDem">R$ —</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-label">Energia Ativa HFP</div>
+          <div class="ri-value" id="enResHFP">R$ —</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-label">Energia Ativa HP</div>
+          <div class="ri-value" id="enResHP">R$ —</div>
+        </div>
+        <div class="result-item total">
+          <div class="ri-label">Valor Total da Nota</div>
+          <div class="ri-value" id="enResTotal">R$ —</div>
+        </div>
+      </div>
+      <p class="band-note" id="enBandNote">Preencha as leituras e o mês para calcular.</p>
+    </div>
+
+  </section>
+
+</div>
+
+<script>
+"use strict";
+
+/* ===== LOGIN (senhas em hash SHA-256) ===== */
+const VALID_USERS = [
+  { u: "wenfranca", h: "d4ce298d258f88a9b709d8dbd54244a118ae4b16442df73369dd15b75185d287" },
+  { u: "gisdias",   h: "d0b62e333deee6fba2d9d93d45616b56cb91ac5634b53c68f3873532af2e7af9" }
+];
+
+async function sha256hex(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function doLogin(ev) {
+  if (ev) ev.preventDefault();
+  const u   = document.getElementById("loginUser").value.trim().toLowerCase();
+  const p   = document.getElementById("loginPass").value;
+  const err = document.getElementById("loginErr");
+  const btn = document.getElementById("loginBtn");
+  err.textContent = "";
+
+  if (!u || !p) { err.textContent = "Preencha usuário e senha."; return; }
+
+  btn.disabled = true;
+  btn.textContent = "Verificando…";
+
+  const h = await sha256hex(p);
+  const ok = VALID_USERS.find(x => x.u === u && x.h === h);
+
+  if (ok) {
+    document.getElementById("loginOverlay").classList.add("hidden");
+  } else {
+    err.textContent = "Usuário ou senha inválidos.";
+    btn.disabled = false;
+    btn.textContent = "Entrar";
+  }
+}
+document.getElementById("loginForm").addEventListener("submit", doLogin);
+
+/* ===== Tabela de tarifas FIXAS ===== */
+const FAIXAS = [
+  { nome: "Fixa",          limite: 0,   mult: null, tarifaAgua: null,  tarifaEsgoto: null,  valorFixoAgua: 42.86, valorFixoEsgoto: 31.71 },
+  { nome: "0 a 5 m³",      limite: 5,   mult: 5,    tarifaAgua: 5.34,  tarifaEsgoto: 3.94 },
+  { nome: "> 5 a 10 m³",   limite: 10,  mult: 5,    tarifaAgua: 8.00,  tarifaEsgoto: 5.922 },
+  { nome: "> 10 a 20 m³",  limite: 20,  mult: 10,   tarifaAgua: 10.72, tarifaEsgoto: 7.935 },
+  { nome: "> 20 a 40 m³",  limite: 40,  mult: 20,   tarifaAgua: 13.50, tarifaEsgoto: 9.988 },
+  { nome: "> 40 a 200 m³", limite: 200, mult: null, tarifaAgua: 16.33, tarifaEsgoto: 12.081 }
+];
+
+const fmtBR  = n => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtNum = n => n.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+const $ = id => document.getElementById(id);
+
+/* ===== Navegação módulos ===== */
+function abrirModulo(nome) {
+  $("home").style.display = "none";
+  $("navBack").style.display = "flex";
+  if (nome === "water") {
+    $("calcWater").classList.add("active");
+    $("statusTxt").textContent = "Módulo: Água";
+  } else if (nome === "energy") {
+    $("calcEnergy").classList.add("active");
+    $("statusTxt").textContent = "Módulo: Energia";
+  }
+}
+function voltarHome() {
+  $("home").style.display = "block";
+  $("calcWater").classList.remove("active");
+  $("calcEnergy").classList.remove("active");
+  $("navBack").style.display = "none";
+  $("statusTxt").textContent = "Pronto";
+}
+$("modWater").addEventListener("click", () => abrirModulo("water"));
+$("modEnergy").addEventListener("click", () => abrirModulo("energy"));
+$("navBack").addEventListener("click", voltarHome);
+
+/* ===== Seletor de mês ===== */
+const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+               "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+(function preencherMeses(){
+  const sel = $("mesRef");
+  const ano = new Date().getFullYear();   // ano atual (2026)
+  for (let m = 0; m < 12; m++) {
+    const opt = document.createElement("option");
+    opt.value = ano + "-" + m;
+    opt.textContent = MESES[m] + " / " + ano;
+    sel.appendChild(opt);
+  }
+})();
+
+function diasDoMes(valor){
+  if (!valor) return null;
+  const [ano, mes] = valor.split("-").map(Number);
+  return new Date(ano, mes + 1, 0).getDate();
+}
+
+function acharFaixa(m3){
+  for (let i = 1; i < FAIXAS.length; i++) {
+    if (m3 <= FAIXAS[i].limite) return FAIXAS[i];
+  }
+  return FAIXAS[FAIXAS.length - 1];
+}
+
+/* ===== Render tabela de faixas ===== */
+function renderTabela(consumoMilLitros){
+  const tbody = $("tabelaFaixas");
+  tbody.innerHTML = "";
+  const faixaAtiva = (consumoMilLitros > 0) ? acharFaixa(consumoMilLitros) : null;
+
+  FAIXAS.forEach(f => {
+    const tr = document.createElement("tr");
+    const ehAtiva = faixaAtiva && f.nome === faixaAtiva.nome;
+    let vAgua = null, vEsgoto = null;
+
+    if (f.nome === "Fixa") {
+      // a linha Fixa sempre exibe seus valores fixos
+      vAgua = f.valorFixoAgua; vEsgoto = f.valorFixoEsgoto;
+    } else if (ehAtiva) {
+      // só a faixa real calcula valores, usando o volume real
+      vAgua   = f.tarifaAgua   * consumoMilLitros;
+      vEsgoto = f.tarifaEsgoto * consumoMilLitros;
+    }
+    // demais faixas: vAgua / vEsgoto ficam null -> exibem "—"
+
+    const temValor = vAgua != null;
+    const vTotal = temValor ? vAgua + vEsgoto : null;
+    if (ehAtiva) tr.className = "active-band";
+
+    const cell = v => temValor ? "R$ " + fmtBR(v) : "—";
+
+    tr.innerHTML =
+      "<td>" + f.nome + (ehAtiva ? '<span class="band-tag">FAIXA REAL</span>' : "") + "</td>" +
+      "<td>" + (f.tarifaAgua   != null ? fmtNum(f.tarifaAgua)   : "—") + "</td>" +
+      "<td>" + (f.tarifaEsgoto != null ? fmtNum(f.tarifaEsgoto) : "—") + "</td>" +
+      "<td class='money'>" + cell(vAgua)   + "</td>" +
+      "<td class='money'>" + cell(vEsgoto) + "</td>" +
+      "<td class='money'>" + cell(vTotal)  + "</td>";
+    tbody.appendChild(tr);
+  });
+  return faixaAtiva;
+}
+
+/* ===== Cálculo principal ===== */
+/* estado do último cálculo válido (para gerar a imagem) */
+let estadoCalc = null;
+
+function calcular(){
+  const lAnt = parseFloat($("leituraAnterior").value);
+  const lAtu = parseFloat($("leituraAtual").value);
+  const dAnt = $("dataAnterior").value;
+  const dAtu = $("dataAtual").value;
+  const mesV = $("mesRef").value;
+
+  let consumo = null, diasMedidos = null, consumoDia = null, totalCobrado = null;
+  const diasMes = diasDoMes(mesV);
+
+  if (!isNaN(lAnt) && !isNaN(lAtu) && lAtu >= lAnt) consumo = lAtu - lAnt;
+  if (dAnt && dAtu) {
+    const ms = new Date(dAtu) - new Date(dAnt);
+    // +1 para contar os dois extremos (igual à planilha: 02/abr a 04/mai = 33 dias)
+    if (ms >= 0) diasMedidos = Math.round(ms / 86400000) + 1;
+  }
+  if (consumo != null && diasMedidos && diasMedidos > 0) consumoDia = consumo / diasMedidos;
+  if (consumoDia != null && diasMes) totalCobrado = consumoDia * diasMes;
+
+  $("outConsumo").textContent      = consumo      != null ? fmtNum(consumo)      : "—";
+  $("outDiasMedidos").textContent  = diasMedidos  != null ? diasMedidos          : "—";
+  $("outConsumoDia").textContent   = consumoDia   != null ? fmtNum(consumoDia)   : "—";
+  $("outDiasMes").textContent      = diasMes      != null ? diasMes              : "—";
+  $("outTotalCobrado").textContent = totalCobrado != null ? fmtNum(totalCobrado) : "—";
+
+  /* m³ cobrados -> unidades de 1.000 L (divisor /1000 da fórmula) */
+  const consumoMilLitros = totalCobrado != null ? totalCobrado / 1000 : 0;
+  const faixa = renderTabela(consumoMilLitros);
+
+  if (totalCobrado != null && faixa) {
+    const vAgua   = faixa.tarifaAgua   * consumoMilLitros;
+    const vEsgoto = faixa.tarifaEsgoto * consumoMilLitros;
+    const vTotal  = vAgua + vEsgoto;
+
+    $("resAgua").textContent   = "R$ " + fmtBR(vAgua);
+    $("resEsgoto").textContent = "R$ " + fmtBR(vEsgoto);
+    $("resTotal").textContent  = "R$ " + fmtBR(vTotal);
+    $("bandNote").innerHTML    =
+      "Consumo cobrado de <strong>" + fmtNum(totalCobrado) +
+      " m³</strong> → enquadrado na faixa <strong>" + faixa.nome + "</strong>.";
+
+    estadoCalc = {
+      mesTxt: $("mesRef").options[$("mesRef").selectedIndex].text,
+      dataAnt: dAnt ? dAnt.split("-").reverse().join("/") : "—",
+      dataAtu: dAtu ? dAtu.split("-").reverse().join("/") : "—",
+      leituraAnt: lAnt, leituraAtu: lAtu,
+      consumo, diasMedidos, consumoDia, diasMes, totalCobrado,
+      faixa: faixa.nome,
+      tarifaAgua: faixa.tarifaAgua, tarifaEsgoto: faixa.tarifaEsgoto,
+      vAgua, vEsgoto, vTotal
+    };
+  } else {
+    $("resAgua").textContent   = "R$ —";
+    $("resEsgoto").textContent = "R$ —";
+    $("resTotal").textContent  = "R$ —";
+    $("bandNote").textContent  = "Preencha leituras, datas e mês de referência para calcular.";
+    estadoCalc = null;
+  }
+}
+
+["dataAnterior","dataAtual","leituraAnterior","leituraAtual","mesRef"].forEach(id => {
+  $(id).addEventListener("input", calcular);
+  $(id).addEventListener("change", calcular);
+});
+
+/* ===== Gerar imagem do resumo ===== */
+function montarFolha(e){
+  const L = (lbl, val) =>
+    '<div style="display:flex;justify-content:space-between;gap:24px;padding:7px 0;border-bottom:1px solid #1e2845;font-size:14px">' +
+      '<span style="color:#8899cc">' + lbl + '</span>' +
+      '<span style="color:#e8f0ff;font-weight:600">' + val + '</span>' +
+    '</div>';
+
+  return '' +
+  '<div style="width:680px;background:#0b0e1c;padding:34px 38px;font-family:Outfit,Arial,sans-serif;color:#e8f0ff;box-sizing:border-box">' +
+
+    /* header */
+    '<div style="display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:2px solid #3d7fff;margin-bottom:22px">' +
+      '<div style="width:38px;height:38px;background:linear-gradient(135deg,#3d7fff,#00c9ff);border-radius:9px"></div>' +
+      '<div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:30px;letter-spacing:2px;color:#00c9ff;line-height:1">CALCNOTA</div>' +
+        '<div style="font-size:11px;color:#4a5880;letter-spacing:1px;text-transform:uppercase">Resumo de Cálculo · Água</div>' +
+      '</div>' +
+      '<div style="margin-left:auto;text-align:right;font-size:11px;color:#4a5880">' +
+        'Gerado em<br><span style="color:#8899cc;font-weight:600">' + new Date().toLocaleDateString("pt-BR") + '</span>' +
+      '</div>' +
+    '</div>' +
+
+    /* bloco leitura e consumo */
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:17px;letter-spacing:1.5px;color:#e8f0ff;margin-bottom:8px">LEITURA E CONSUMO</div>' +
+    '<div style="background:#10152a;border:1px solid #1e2845;border-radius:10px;padding:6px 16px;margin-bottom:20px">' +
+      L("Mês de referência", e.mesTxt) +
+      L("Período medido", e.dataAnt + " a " + e.dataAtu + "  ·  " + e.diasMedidos + " dias") +
+      L("Leitura anterior", fmtNum(e.leituraAnt) + " m³") +
+      L("Leitura atual", fmtNum(e.leituraAtu) + " m³") +
+      L("Consumo do período", fmtNum(e.consumo) + " m³") +
+      L("Consumo por dia", fmtNum(e.consumoDia) + " m³") +
+      L("Dias do mês", e.diasMes) +
+    '</div>' +
+
+    /* tarifa por faixa */
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:17px;letter-spacing:1.5px;color:#e8f0ff;margin-bottom:8px">TARIFA POR FAIXA</div>' +
+    '<div style="background:#10152a;border:1px solid #1e2845;border-radius:10px;padding:6px 16px;margin-bottom:20px">' +
+      L("Total cobrado", fmtNum(e.totalCobrado) + " m³") +
+      L("Faixa aplicada", e.faixa) +
+      L("Consumo de faixa (1.000 Lt)", fmtNum(e.tarifaAgua)) +
+      L("Tarifa esgoto (1.000 Lt)", fmtNum(e.tarifaEsgoto)) +
+      L("Valor Água", "R$ " + fmtBR(e.vAgua)) +
+      L("Valor Esgoto", "R$ " + fmtBR(e.vEsgoto)) +
+    '</div>' +
+
+    /* total destacado */
+    '<div style="background:linear-gradient(135deg,#3d7fff,#00c9ff);border-radius:12px;padding:18px 22px;display:flex;justify-content:space-between;align-items:center">' +
+      '<span style="font-size:12px;color:#05070f;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">Valor Total da Nota</span>' +
+      '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:38px;color:#fff;line-height:1">R$ ' + fmtBR(e.vTotal) + '</span>' +
+    '</div>' +
+
+    '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #1e2845;text-align:center;letter-spacing:0.5px">' +
+      '<div style="font-size:10px;color:#4a5880">CalcNota · Documento gerado automaticamente para emissão de nota de consumo</div>' +
+      '<div style="font-size:10px;color:#8899cc;margin-top:4px">Desenvolvido por <span style="color:#00c9ff;font-weight:600">Wendell França</span></div>' +
+    '</div>' +
+  '</div>';
+}
+
+$("btnImagem").addEventListener("click", () => {
+  if (!estadoCalc) {
+    alert("Preencha todos os campos do Bloco 1 antes de gerar a imagem.");
+    return;
+  }
+  const btn = $("btnImagem");
+  btn.disabled = true;
+  btn.querySelector("span").textContent = "Gerando…";
+
+  /* renderiza a folha fora da tela */
+  const holder = document.createElement("div");
+  holder.style.cssText = "position:fixed;left:-9999px;top:0";
+  holder.innerHTML = montarFolha(estadoCalc);
+  document.body.appendChild(holder);
+
+  html2canvas(holder.firstChild, { scale: 2, backgroundColor: "#0b0e1c" })
+    .then(canvas => {
+      const link = document.createElement("a");
+      link.download = "calcnota-agua-" + new Date().toISOString().slice(0,10) + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      btn.classList.add("done");
+      btn.querySelector("span").textContent = "Imagem Gerada";
+    })
+    .catch(err => {
+      alert("Não foi possível gerar a imagem: " + err.message);
+      btn.querySelector("span").textContent = "Gerar Imagem";
+    })
+    .finally(() => {
+      document.body.removeChild(holder);
+      btn.disabled = false;
+      setTimeout(() => {
+        btn.classList.remove("done");
+        btn.querySelector("span").textContent = "Gerar Imagem";
+      }, 2500);
+    });
+});
+
+renderTabela(0);
+calcular();
+
+/* ==================================================================
+   ===================  MÓDULO DE ENERGIA  =========================
+   ================================================================== */
+
+/* tipos de demanda com percentual e tarifa FIXOS */
+const TIPOS_ENERGIA = [
+  { nome: "Demanda Ativa HFP kWh", pct: 0.200256996478814, tarifa: 29.91083137 },
+  { nome: "Energia Ativa HFP kWh", pct: 88.8223219798742,  tarifa: 0.59008655 },
+  { nome: "Energia Ativa HP kWh",  pct: 10.977421023647,   tarifa: 2.9962759 }
+];
+
+/* seletor de mês da energia (só 2026, igual à água) */
+(function preencherMesesEnergia(){
+  const sel = $("enMesRef");
+  const ano = new Date().getFullYear();
+  for (let m = 0; m < 12; m++) {
+    const opt = document.createElement("option");
+    opt.value = ano + "-" + m;
+    opt.textContent = MESES[m] + " / " + ano;
+    sel.appendChild(opt);
+  }
+})();
+
+let estadoEnergia = null;
+
+function renderTabelaEnergia(consumo){
+  const tbody = $("enTabela");
+  tbody.innerHTML = "";
+  TIPOS_ENERGIA.forEach(t => {
+    const temConsumo = consumo != null;
+    const demanda = temConsumo ? consumo * t.pct / 100 : null;
+    const valor   = temConsumo ? demanda * t.tarifa : null;
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + t.nome + "</td>" +
+      "<td>" + t.pct.toLocaleString("pt-BR", {minimumFractionDigits: 2, maximumFractionDigits: 4}) + " %</td>" +
+      "<td>" + fmtNum(t.tarifa) + "</td>" +
+      "<td>" + (temConsumo ? fmtBR(demanda) : "—") + "</td>" +
+      "<td class='money'>" + (temConsumo ? "R$ " + fmtBR(valor) : "—") + "</td>";
+    tbody.appendChild(tr);
+  });
+}
+
+function calcularEnergia(){
+  const lAnt = parseFloat($("enLeituraAnterior").value);
+  const lAtu = parseFloat($("enLeituraAtual").value);
+  const mesV = $("enMesRef").value;
+
+  let consumo = null;
+  if (!isNaN(lAnt) && !isNaN(lAtu) && lAtu >= lAnt) consumo = lAtu - lAnt;
+
+  $("enOutConsumo").textContent = consumo != null ? fmtNum(consumo) : "—";
+
+  renderTabelaEnergia(consumo);
+
+  if (consumo != null && mesV) {
+    const linhas = TIPOS_ENERGIA.map(t => {
+      const demanda = consumo * t.pct / 100;
+      return { nome: t.nome, pct: t.pct, tarifa: t.tarifa,
+               demanda: demanda, valor: demanda * t.tarifa };
+    });
+    const vTotal = linhas.reduce((s, l) => s + l.valor, 0);
+
+    $("enResDem").textContent   = "R$ " + fmtBR(linhas[0].valor);
+    $("enResHFP").textContent   = "R$ " + fmtBR(linhas[1].valor);
+    $("enResHP").textContent    = "R$ " + fmtBR(linhas[2].valor);
+    $("enResTotal").textContent = "R$ " + fmtBR(vTotal);
+    $("enBandNote").innerHTML   =
+      "Consumo total de <strong>" + fmtNum(consumo) +
+      " kWh</strong> distribuído entre os 3 tipos de demanda.";
+
+    estadoEnergia = {
+      mesTxt: $("enMesRef").options[$("enMesRef").selectedIndex].text,
+      leituraAnt: lAnt, leituraAtu: lAtu, consumo, linhas, vTotal
+    };
+  } else {
+    $("enResDem").textContent   = "R$ —";
+    $("enResHFP").textContent   = "R$ —";
+    $("enResHP").textContent    = "R$ —";
+    $("enResTotal").textContent = "R$ —";
+    $("enBandNote").textContent = "Preencha as leituras e o mês para calcular.";
+    estadoEnergia = null;
+  }
+}
+
+["enLeituraAnterior","enLeituraAtual","enMesRef"].forEach(id => {
+  $(id).addEventListener("input", calcularEnergia);
+  $(id).addEventListener("change", calcularEnergia);
+});
+
+/* ===== Gerar imagem - energia ===== */
+function montarFolhaEnergia(e){
+  const L = (lbl, val) =>
+    '<div style="display:flex;justify-content:space-between;gap:24px;padding:7px 0;border-bottom:1px solid #1e2845;font-size:14px">' +
+      '<span style="color:#8899cc">' + lbl + '</span>' +
+      '<span style="color:#e8f0ff;font-weight:600">' + val + '</span>' +
+    '</div>';
+
+  let linhasTabela =
+    '<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #2a375e;font-size:10px;color:#4a5880;font-weight:700;letter-spacing:0.5px;text-transform:uppercase">' +
+      '<span style="flex:1">Tipo</span>' +
+      '<span style="width:78px;text-align:right">Tarifa</span>' +
+      '<span style="width:92px;text-align:right">Demanda</span>' +
+      '<span style="width:104px;text-align:right">Valor Total</span>' +
+    '</div>';
+  e.linhas.forEach(l => {
+    linhasTabela +=
+      '<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #1e2845;font-size:12px">' +
+        '<span style="color:#8899cc;flex:1">' + l.nome + '</span>' +
+        '<span style="color:#8899cc;width:78px;text-align:right">' + fmtNum(l.tarifa) + '</span>' +
+        '<span style="color:#8899cc;width:92px;text-align:right">' + fmtBR(l.demanda) + ' kWh</span>' +
+        '<span style="color:#e8f0ff;font-weight:600;width:104px;text-align:right">R$ ' + fmtBR(l.valor) + '</span>' +
+      '</div>';
+  });
+
+  return '' +
+  '<div style="width:680px;background:#0b0e1c;padding:34px 38px;font-family:Outfit,Arial,sans-serif;color:#e8f0ff;box-sizing:border-box">' +
+
+    '<div style="display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:2px solid #3d7fff;margin-bottom:22px">' +
+      '<div style="width:38px;height:38px;background:linear-gradient(135deg,#3d7fff,#00c9ff);border-radius:9px"></div>' +
+      '<div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:30px;letter-spacing:2px;color:#00c9ff;line-height:1">CALCNOTA</div>' +
+        '<div style="font-size:11px;color:#4a5880;letter-spacing:1px;text-transform:uppercase">Resumo de Cálculo · Energia</div>' +
+      '</div>' +
+      '<div style="margin-left:auto;text-align:right;font-size:11px;color:#4a5880">' +
+        'Gerado em<br><span style="color:#8899cc;font-weight:600">' + new Date().toLocaleDateString("pt-BR") + '</span>' +
+      '</div>' +
+    '</div>' +
+
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:17px;letter-spacing:1.5px;color:#e8f0ff;margin-bottom:8px">LEITURA E CONSUMO</div>' +
+    '<div style="background:#10152a;border:1px solid #1e2845;border-radius:10px;padding:6px 16px;margin-bottom:20px">' +
+      L("Mês de referência", e.mesTxt) +
+      L("Leitura anterior", fmtNum(e.leituraAnt) + " kWh") +
+      L("Leitura atual", fmtNum(e.leituraAtu) + " kWh") +
+      L("Consumo total", fmtNum(e.consumo) + " kWh") +
+    '</div>' +
+
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:17px;letter-spacing:1.5px;color:#e8f0ff;margin-bottom:8px">DEMANDA POR TIPO</div>' +
+    '<div style="background:#10152a;border:1px solid #1e2845;border-radius:10px;padding:6px 16px;margin-bottom:20px">' +
+      linhasTabela +
+    '</div>' +
+
+    '<div style="background:linear-gradient(135deg,#3d7fff,#00c9ff);border-radius:12px;padding:18px 22px;display:flex;justify-content:space-between;align-items:center">' +
+      '<span style="font-size:12px;color:#05070f;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">Valor Total da Nota</span>' +
+      '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:38px;color:#fff;line-height:1">R$ ' + fmtBR(e.vTotal) + '</span>' +
+    '</div>' +
+
+    '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #1e2845;text-align:center;letter-spacing:0.5px">' +
+      '<div style="font-size:10px;color:#4a5880">CalcNota · Documento gerado automaticamente para emissão de nota de consumo</div>' +
+      '<div style="font-size:10px;color:#8899cc;margin-top:4px">Desenvolvido por <span style="color:#00c9ff;font-weight:600">Wendell França</span></div>' +
+    '</div>' +
+  '</div>';
+}
+
+$("btnImagemEn").addEventListener("click", () => {
+  if (!estadoEnergia) {
+    alert("Preencha as leituras e o mês antes de gerar a imagem.");
+    return;
+  }
+  const btn = $("btnImagemEn");
+  btn.disabled = true;
+  btn.querySelector("span").textContent = "Gerando…";
+
+  const holder = document.createElement("div");
+  holder.style.cssText = "position:fixed;left:-9999px;top:0";
+  holder.innerHTML = montarFolhaEnergia(estadoEnergia);
+  document.body.appendChild(holder);
+
+  html2canvas(holder.firstChild, { scale: 2, backgroundColor: "#0b0e1c" })
+    .then(canvas => {
+      const link = document.createElement("a");
+      link.download = "calcnota-energia-" + new Date().toISOString().slice(0,10) + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      btn.classList.add("done");
+      btn.querySelector("span").textContent = "Imagem Gerada";
+    })
+    .catch(err => {
+      alert("Não foi possível gerar a imagem: " + err.message);
+      btn.querySelector("span").textContent = "Gerar Imagem";
+    })
+    .finally(() => {
+      document.body.removeChild(holder);
+      btn.disabled = false;
+      setTimeout(() => {
+        btn.classList.remove("done");
+        btn.querySelector("span").textContent = "Gerar Imagem";
+      }, 2500);
+    });
+});
+
+renderTabelaEnergia(null);
+calcularEnergia();
+</script>
+</body>
+</html>
